@@ -1,15 +1,20 @@
 <script lang="ts">
 	//
-	// TODO
+	// Todo
 	// - Position in the center
 	// - Scale to viewport
 	// - Add shake animation
 	// - Prevent duplicate guesses
 	//
+	// Bugs
+	// - Word background animation after correct submission
+	//
 
 	//
-	// Data
+	// Constants
 	//
+
+	import { shuffleArray } from '$lib/shuffleArray';
 
 	const groups = [
 		{
@@ -47,17 +52,19 @@
 	let selectedWords: string[] = $state([]);
 
 	let completedGroupIndexes: number[] = $state([]);
+
 	const completedGroups = $derived(completedGroupIndexes.map((index) => groups[index]));
 
-	const remainingGroupIndexes = $derived(
-		groupIndexes.filter((index) => !completedGroupIndexes.includes(index))
-	);
 	const remainingWords = $derived(
-		remainingGroupIndexes.map((index) => groups[index]).flatMap((g) => g.words)
+		groupIndexes
+			.filter((index) => !completedGroupIndexes.includes(index))
+			.flatMap((index) => groups[index].words)
 	);
-	const remainingWordsRandom = $derived(
-		remainingWords.toSorted(() => Math.random() - Math.random())
-	);
+
+	let remainingWordsRandom: string[] = $state([]);
+	$effect(() => {
+		remainingWordsRandom = shuffleArray(remainingWords);
+	});
 
 	const gameState: 'playing' | 'won' | 'lost' = $derived.by(() => {
 		if (numGuessesRemaining === 0) return 'lost';
@@ -66,6 +73,7 @@
 	});
 
 	const isSubmitEnabled = $derived(selectedWords.length === 4 && gameState === 'playing');
+
 	const isDeselectEnabled = $derived(selectedWords.length > 0);
 
 	//
@@ -92,11 +100,11 @@
 	}
 
 	function shuffleWords(): void {
-		// TODO: fix shuffle
-		// remainingWordsRandom = words.toSorted(() => Math.random() - Math.random());
+		remainingWordsRandom = shuffleArray(remainingWords);
 	}
 
 	function submitSelection(): void {
+		// Find matching group
 		const groupIndex = groups.findIndex((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
@@ -105,8 +113,6 @@
 			completedGroupIndexes.push(groupIndex);
 
 			deselectWords();
-		} else if (numGuessesRemaining === 0) {
-			alert('Game over :(');
 		} else {
 			numGuessesRemaining -= 1;
 		}
@@ -137,19 +143,23 @@
 			{#each new Array(numGuessesRemaining) as _}
 				<span class="mistake-dot"></span>
 			{/each}
+		{:else if gameState === 'won'}
+			You did it!
 		{:else if gameState === 'lost'}
 			Game over
 		{/if}
 	</div>
-	<div class="controls">
-		<button class="control" onclick={() => shuffleWords()}>Shuffle</button>
-		<button class="control" disabled={!isDeselectEnabled} onclick={() => deselectWords()}
-			>Deselect All</button
-		>
-		<button class="control" disabled={!isSubmitEnabled} onclick={() => submitSelection()}
-			>Submit</button
-		>
-	</div>
+	{#if gameState === 'playing'}
+		<div class="controls">
+			<button class="control" onclick={() => shuffleWords()}>Shuffle</button>
+			<button class="control" disabled={!isDeselectEnabled} onclick={() => deselectWords()}
+				>Deselect All</button
+			>
+			<button class="control" disabled={!isSubmitEnabled} onclick={() => submitSelection()}
+				>Submit</button
+			>
+		</div>
+	{/if}
 </main>
 
 <style lang="css">
