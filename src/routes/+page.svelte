@@ -4,7 +4,6 @@
 	// - Position in the center
 	// - Scale to viewport
 	// - Add shake animation
-	// - Prevent duplicate guesses
 	//
 	// Bugs
 	// - Word background animation after correct submission
@@ -47,7 +46,9 @@
 	// State
 	//
 
-	let numGuessesRemaining = $state(numMaxGuesses);
+	let guesses: string[][] = $state([]);
+
+	let numGuessesRemaining = $derived(numMaxGuesses - guesses.length);
 
 	let selectedWords: string[] = $state([]);
 
@@ -96,7 +97,7 @@
 	}
 
 	function deselectWords(): void {
-		selectedWords.length = 0;
+		selectedWords = [];
 	}
 
 	function shuffleWords(): void {
@@ -104,6 +105,15 @@
 	}
 
 	function submitSelection(): void {
+		// Check for duplicate guess
+		const hasAlreadyGuessed = guesses.some((guess) =>
+			guess.every((word) => selectedWords.includes(word))
+		);
+		if (hasAlreadyGuessed) {
+			alert('Duplicate guess');
+			return;
+		}
+
 		// Find matching group
 		const groupIndex = groups.findIndex((group) =>
 			group.words.every((word) => selectedWords.includes(word))
@@ -114,7 +124,7 @@
 
 			deselectWords();
 		} else {
-			numGuessesRemaining -= 1;
+			guesses.push(selectedWords.slice());
 		}
 	}
 </script>
@@ -127,7 +137,7 @@
 				{group.words.join(', ')}
 			</div>
 		{/each}
-		{#each remainingWordsRandom as word, i}
+		{#each remainingWordsRandom as word}
 			<button
 				class="word"
 				data-selected={selectedWords.includes(word)}
