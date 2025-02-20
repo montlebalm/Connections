@@ -1,7 +1,6 @@
 <script lang="ts">
 	//
 	// TODO
-	// - Disable submit button until 4 are selected
 	// - Position in the center
 	// - Scale to viewport
 	// - Add shake animation
@@ -45,24 +44,29 @@
 
 	let numGuessesRemaining = $state(numMaxGuesses);
 
-	let selectedWords: String[] = $state([]);
+	let selectedWords: string[] = $state([]);
 
-	let completedGroupIndexes = $state([0, 2]);
+	let completedGroupIndexes: number[] = $state([]);
 	const completedGroups = $derived(completedGroupIndexes.map((index) => groups[index]));
 
-	const remainingGroupIndexes = $derived(groupIndexes.filter((index) => !completedGroupIndexes.includes(index)));
-	const remainingWords = $derived(
-		remainingGroupIndexes
-			.map((index) => groups[index])
-			.flatMap((g) => g.words)
+	const remainingGroupIndexes = $derived(
+		groupIndexes.filter((index) => !completedGroupIndexes.includes(index))
 	);
-	const remainingWordsRandom = $derived(remainingWords.toSorted(() => Math.random() - Math.random()));
+	const remainingWords = $derived(
+		remainingGroupIndexes.map((index) => groups[index]).flatMap((g) => g.words)
+	);
+	const remainingWordsRandom = $derived(
+		remainingWords.toSorted(() => Math.random() - Math.random())
+	);
 
 	const gameState: 'playing' | 'won' | 'lost' = $derived.by(() => {
 		if (numGuessesRemaining === 0) return 'lost';
 		if (completedGroupIndexes.length === groups.length) return 'won';
 		return 'playing';
 	});
+
+	const isSubmitEnabled = $derived(selectedWords.length === 4 && gameState === 'playing');
+	const isDeselectEnabled = $derived(selectedWords.length > 0);
 
 	//
 	// Handlers
@@ -93,7 +97,7 @@
 	}
 
 	function submitSelection(): void {
-		const groupIndex = groups.findIndex((group) => 
+		const groupIndex = groups.findIndex((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
 
@@ -112,10 +116,7 @@
 <main>
 	<div class="board">
 		{#each completedGroups as group}
-			<div
-				class="group"
-				data-difficulty={group.difficulty}
-			>
+			<div class="group" data-difficulty={group.difficulty}>
 				<div class="group-theme">{group.theme}</div>
 				{group.words.join(', ')}
 			</div>
@@ -131,28 +132,35 @@
 		{/each}
 	</div>
 	<div class="mistakes">
-		{#if numGuessesRemaining > 0}
+		{#if gameState === 'playing'}
 			Guesses remaining:
 			{#each new Array(numGuessesRemaining) as _}
-				<span class="mistake-dot" />
+				<span class="mistake-dot"></span>
 			{/each}
-		{:else}
+		{:else if gameState === 'lost'}
 			Game over
 		{/if}
 	</div>
 	<div class="controls">
-		<button onclick={() => deselectWords()}>Deselect</button>
-		<button onclick={() => shuffleWords()}>Shuffle</button>
-		<button
-			disabled={selectedWords.length < 4}
-			onclick={() => submitSelection()}
+		<button class="control" onclick={() => shuffleWords()}>Shuffle</button>
+		<button class="control" disabled={!isDeselectEnabled} onclick={() => deselectWords()}
+			>Deselect All</button
 		>
-			Submit
-		</button>
+		<button class="control" disabled={!isSubmitEnabled} onclick={() => submitSelection()}
+			>Submit</button
+		>
 	</div>
 </main>
 
-<style lang="scss">
+<style lang="css">
+	:root {
+		--color-white: #fff;
+		--color-grey-1: #333;
+		--color-grey-2: #666;
+		--color-grey-3: #ccc;
+		--color-grey-4: #eee;
+	}
+
 	main {
 		align-items: center;
 		display: flex;
@@ -174,7 +182,7 @@
 	.group {
 		align-items: center;
 		border-radius: 8px;
-		color: #333;
+		color: var(--color-grey-1);
 		display: flex;
 		flex-direction: column;
 		font-size: 1rem;
@@ -183,22 +191,22 @@
 		justify-content: center;
 		text-transform: uppercase;
 		width: 100%;
+	}
 
-		&[data-difficulty="1"] {
-			background: #f9df6d;
-		}
+	.group[data-difficulty='1'] {
+		background: #f9df6d;
+	}
 
-		&[data-difficulty="2"] {
-			background: #a0c35a;
-		}
+	.group[data-difficulty='2'] {
+		background: #a0c35a;
+	}
 
-		&[data-difficulty="3"] {
-			background: #b0c4ef;
-		}
+	.group[data-difficulty='3'] {
+		background: #b0c4ef;
+	}
 
-		&[data-difficulty="4"] {
-			background: #ba81c5;
-		}
+	.group[data-difficulty='4'] {
+		background: #ba81c5;
 	}
 
 	.group-theme {
@@ -206,23 +214,24 @@
 	}
 
 	.word {
-		background: #eee;
+		background: var(--color-grey-4);
 		border: none;
 		border-radius: 8px;
-		color: #333;
+		color: var(--color-grey-1);
 		font-size: 1rem;
 		font-weight: bold;
 		height: 80px;
 		padding: 0;
 		text-transform: uppercase;
-		transition: background 200ms ease,
+		transition:
+			background 200ms ease,
 			color 200ms ease;
 		width: 144px;
+	}
 
-		&[data-selected="true"] {
-			background: #666;
-			color: white;
-		}
+	.word[data-selected='true'] {
+		background: var(--color-grey-2);
+		color: var(--color-white);
 	}
 
 	.mistakes {
@@ -231,7 +240,7 @@
 	}
 
 	.mistake-dot {
-		background: #666;
+		background: var(--color-grey-2);
 		border-radius: 50%;
 		height: 16px;
 		width: 16px;
@@ -240,5 +249,18 @@
 	.controls {
 		display: flex;
 		gap: 16px;
+	}
+
+	.control {
+		background: var(--color-white);
+		border: 1px solid var(--color-grey-2);
+		border-radius: 16px;
+		font-size: 1em;
+		padding: 8px 16px;
+	}
+
+	.control[disabled] {
+		border-color: var(--color-grey-3);
+		color: var(--color-grey-3);
 	}
 </style>
