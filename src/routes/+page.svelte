@@ -3,7 +3,10 @@
 	// Todo
 	// - Position in the center
 	// - Scale to viewport
-	// - Add shake animation
+	//
+	// Animation
+	// - Shuffle smoothly moves cards positions
+	// - Shake animation for incorrect guesses
 	//
 	// Bugs
 	// - Word background animation after correct submission
