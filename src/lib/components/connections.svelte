@@ -107,6 +107,7 @@
 </script>
 
 <main>
+	<div class="preamble">Create four groups of four!</div>
 	<div class="board">
 		{#each completedGroups as group}
 			<div class="group" data-difficulty={group.difficulty}>
