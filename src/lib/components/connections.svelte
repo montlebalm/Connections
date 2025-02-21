@@ -110,8 +110,10 @@
 	<div class="board">
 		{#each completedGroups as group}
 			<div class="group" data-difficulty={group.difficulty}>
-				<div class="group-theme">{group.theme}</div>
-				{group.words.join(', ')}
+				<div class="group-text">
+					<div class="group-text-theme">{group.theme}</div>
+					{group.words.join(', ')}
+				</div>
 			</div>
 		{/each}
 		{#each remainingWordsRandom as word}
@@ -167,7 +169,7 @@
 		gap: 20px;
 		height: 300px;
 		justify-content: center;
-		margin: 100px auto;
+		margin: 200px auto;
 		width: 600px;
 	}
 
@@ -180,16 +182,29 @@
 
 	.group {
 		align-items: center;
+		animation-duration: 750ms;
+		animation-name: group-enter;
+		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
 		border-radius: 8px;
-		color: var(--color-grey-1);
 		display: flex;
 		flex-direction: column;
-		font-size: 1rem;
-		gap: 4px;
 		height: 80px;
 		justify-content: center;
-		text-transform: uppercase;
 		width: 100%;
+	}
+
+	@keyframes group-enter {
+		0% {
+			scale: 0;
+		}
+
+		50% {
+			scale: 1.1;
+		}
+
+		100% {
+			scale: 1;
+		}
 	}
 
 	.group[data-difficulty='1'] {
@@ -208,7 +223,29 @@
 		background: #ba81c5;
 	}
 
-	.group-theme {
+	.group-text {
+		align-items: center;
+		animation-duration: 500ms;
+		animation-name: group-text-enter;
+		color: var(--color-grey-1);
+		display: flex;
+		flex-direction: column;
+		font-size: 1rem;
+		gap: 4px;
+		text-transform: uppercase;
+	}
+
+	@keyframes group-text-enter {
+		0% {
+			opacity: 0;
+		}
+
+		100% {
+			opacity: 1;
+		}
+	}
+
+	.group-text-theme {
 		font-weight: bold;
 	}
 
