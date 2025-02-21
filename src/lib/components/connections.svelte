@@ -24,6 +24,7 @@
 	let numGuessesRemaining = $derived(numMaxGuesses - guesses.length);
 
 	let selectedWords: string[] = $state([]);
+	let submittedWords: string[] = $state([]);
 
 	let completedGroupIndexes: number[] = $state([]);
 
@@ -59,12 +60,14 @@
 		if (selectedWords.includes(word)) {
 			const wordIndex = selectedWords.indexOf(word);
 			selectedWords.splice(wordIndex, 1);
+
 			return;
 		}
 
 		// Select word
 		if (selectedWords.length < 4) {
 			selectedWords.push(word);
+
 			return;
 		}
 	}
@@ -92,8 +95,21 @@
 			group.words.every((word) => selectedWords.includes(word))
 		);
 		if (groupIndex !== -1) {
-			deselectWords();
-			completedGroupIndexes.push(groupIndex);
+			// Sort the selected words so that the elements animate in order
+			selectedWords.sort(
+				(a, b) => remainingWordsRandom.indexOf(a) - remainingWordsRandom.indexOf(b)
+			);
+
+			// Begin submission animation
+			submittedWords = selectedWords;
+
+			setTimeout(() => {
+				// Reset submission animation
+				submittedWords = [];
+
+				deselectWords();
+				completedGroupIndexes.push(groupIndex);
+			}, 650 + 500);
 			return;
 		}
 
@@ -117,7 +133,9 @@
 				<button
 					class="word"
 					data-selected={selectedWords.includes(word)}
+					data-submitted={submittedWords.includes(word)}
 					onclick={() => toggleWord(word)}
+					style="--selected-index: {submittedWords.indexOf(word)}"
 				>
 					{word}
 				</button>
@@ -181,7 +199,7 @@
 
 	.group {
 		align-items: center;
-		animation-duration: 750ms;
+		animation-duration: 1000ms;
 		animation-name: group-enter;
 		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
 		border-radius: 8px;
@@ -267,6 +285,27 @@
 	.word[data-selected='true'] {
 		background: var(--color-grey-2);
 		color: var(--color-white);
+	}
+
+	.word[data-submitted='true'] {
+		animation-delay: calc(var(--selected-index) * 100ms);
+		animation-duration: 500ms;
+		animation-name: word-submit;
+		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+	}
+
+	@keyframes word-submit {
+		0% {
+			transform: translateY(0);
+		}
+
+		50% {
+			transform: translateY(-4px);
+		}
+
+		100% {
+			transform: translateY(0);
+		}
 	}
 
 	.mistakes {
