@@ -272,6 +272,7 @@
 	}
 
 	.mistakes {
+		align-items: center;
 		display: flex;
 		gap: 8px;
 	}
