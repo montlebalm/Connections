@@ -147,8 +147,11 @@
 			<button class="control" disabled={!isDeselectEnabled} onclick={() => deselectWords()}
 				>Deselect All</button
 			>
-			<button class="control" disabled={!isSubmitEnabled} onclick={() => submitSelection()}
-				>Submit</button
+			<button
+				class="control"
+				data-variant="primary"
+				disabled={!isSubmitEnabled}
+				onclick={() => submitSelection()}>Submit</button
 			>
 		</div>
 	{/if}
@@ -300,5 +303,11 @@
 	.control[disabled] {
 		border-color: var(--color-grey-3);
 		color: var(--color-grey-3);
+	}
+
+	.control[data-variant='primary']:not([disabled]) {
+		background: var(--color-grey-1);
+		border-color: var(--color-grey-1);
+		color: var(--color-white);
 	}
 </style>
