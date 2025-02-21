@@ -25,4 +25,5 @@
 			words: ['foul', 'louse', 'muck', 'screw']
 		}
 	]}
+	numMaxGuesses={5}
 />

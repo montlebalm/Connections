@@ -7,9 +7,11 @@
 	//
 
 	const {
-		groups
+		groups,
+		numMaxGuesses
 	}: {
 		groups: Group[];
+		numMaxGuesses: number;
 	} = $props();
 
 	//
@@ -17,8 +19,6 @@
 	//
 
 	const groupIndexes = [0, 1, 2, 3];
-
-	const numMaxGuesses = 5;
 
 	//
 	// State
