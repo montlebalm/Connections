@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { range } from '$lib/range';
 	import { shuffleArray } from '$lib/shuffleArray';
 	import { type Group } from '$lib/types';
 
@@ -15,12 +16,6 @@
 	} = $props();
 
 	//
-	// Constants
-	//
-
-	const groupIndexes = [0, 1, 2, 3];
-
-	//
 	// State
 	//
 
@@ -35,7 +30,7 @@
 	const completedGroups = $derived(completedGroupIndexes.map((index) => groups[index]));
 
 	const remainingWords = $derived(
-		groupIndexes
+		range(0, groups.length)
 			.filter((index) => !completedGroupIndexes.includes(index))
 			.flatMap((index) => groups[index].words)
 	);
