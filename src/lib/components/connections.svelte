@@ -49,9 +49,15 @@
 		return 'playing';
 	});
 
-	const isSubmitEnabled = $derived(selectedWords.length === 4 && gameState === 'playing');
+	const isActionable = $derived(
+		gameState === 'playing' && !submittedWords.length && !erroredWords.length
+	);
 
-	const isDeselectEnabled = $derived(selectedWords.length > 0);
+	const isShuffleEnabled = $derived(!isActionable);
+
+	const isDeselectEnabled = $derived(!isActionable && selectedWords.length > 0);
+
+	const isSubmitEnabled = $derived(!isActionable && selectedWords.length === 4);
 
 	//
 	// Handlers
@@ -181,8 +187,10 @@
 	</div>
 	{#if gameState === 'playing'}
 		<div class="controls">
-			<button class="control" onclick={() => shuffleWords()}>Shuffle</button>
-			<button class="control" disabled={!isDeselectEnabled} onclick={() => deselectWords()}
+			<button class="control" disabled={!isShuffleEnabled} onclick={() => handleShuffle()}
+				>Shuffle</button
+			>
+			<button class="control" disabled={!isDeselectEnabled} onclick={() => handleDeselect()}
 				>Deselect All</button
 			>
 			<button
