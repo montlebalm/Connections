@@ -394,7 +394,7 @@
 	.control {
 		background: var(--color-white);
 		border: 1px solid var(--color-grey-2);
-		border-radius: 16px;
+		border-radius: 20px;
 		font-size: 1em;
 		padding: 8px 16px;
 	}
