@@ -53,11 +53,11 @@
 		gameState === 'playing' && !submittedWords.length && !erroredWords.length
 	);
 
-	const isShuffleEnabled = $derived(!isActionable);
+	const isShuffleEnabled = $derived(isActionable);
 
-	const isDeselectEnabled = $derived(!isActionable && selectedWords.length > 0);
+	const isDeselectEnabled = $derived(isActionable && selectedWords.length > 0);
 
-	const isSubmitEnabled = $derived(!isActionable && selectedWords.length === 4);
+	const isSubmitEnabled = $derived(isActionable && selectedWords.length === 4);
 
 	//
 	// Handlers
@@ -105,7 +105,7 @@
 			group.words.every((word) => selectedWords.includes(word))
 		);
 		if (groupIndex !== -1) {
-			await wait(500);
+			await wait(600);
 
 			handleDeselect();
 			completedGroupIndexes.push(groupIndex);
