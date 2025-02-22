@@ -100,7 +100,7 @@
 
 		await animateSubmit();
 
-		// Find matching group
+		// Success
 		const groupIndex = groups.findIndex((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
@@ -411,4 +411,3 @@
 		color: var(--color-white);
 	}
 </style>
-
