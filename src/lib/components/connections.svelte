@@ -2,6 +2,7 @@
 	import { range } from '$lib/range';
 	import { shuffleArray } from '$lib/shuffleArray';
 	import { type Group } from '$lib/types';
+	import { wait } from '$lib/wait';
 
 	//
 	// Props
@@ -25,6 +26,7 @@
 
 	let selectedWords: string[] = $state([]);
 	let submittedWords: string[] = $state([]);
+	let erroredWords: string[] = $state([]);
 
 	let completedGroupIndexes: number[] = $state([]);
 
@@ -55,7 +57,7 @@
 	// Handlers
 	//
 
-	function toggleWord(word: string): void {
+	function handleToggleWord(word: string): void {
 		// Deselect word
 		if (selectedWords.includes(word)) {
 			const wordIndex = selectedWords.indexOf(word);
@@ -72,15 +74,15 @@
 		}
 	}
 
-	function deselectWords(): void {
+	function handleDeselect(): void {
 		selectedWords = [];
 	}
 
-	function shuffleWords(): void {
+	function handleShuffle(): void {
 		remainingWordsRandom = shuffleArray(remainingWords);
 	}
 
-	function submitSelection(): void {
+	async function handleSubmit(): Promise<void> {
 		// Check for duplicate guess
 		const hasAlreadyGuessed = guesses.some((guess) =>
 			guess.every((word) => selectedWords.includes(word))
@@ -90,30 +92,52 @@
 			return;
 		}
 
+		await animateSubmit();
+
 		// Find matching group
 		const groupIndex = groups.findIndex((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
 		if (groupIndex !== -1) {
-			// Sort the selected words so that the elements animate in order
-			selectedWords.sort(
-				(a, b) => remainingWordsRandom.indexOf(a) - remainingWordsRandom.indexOf(b)
-			);
+			await wait(500);
 
-			// Begin submission animation
-			submittedWords = selectedWords;
+			handleDeselect();
+			completedGroupIndexes.push(groupIndex);
 
-			setTimeout(() => {
-				// Reset submission animation
-				submittedWords = [];
-
-				deselectWords();
-				completedGroupIndexes.push(groupIndex);
-			}, 650 + 500);
 			return;
 		}
 
+		// Error
+		await animateSubmitError();
 		guesses.push(selectedWords.slice());
+	}
+
+	async function animateSubmit(): Promise<void> {
+		// Sort words in the order that they appear in the grid
+		submittedWords = selectedWords.toSorted(
+			(a, b) => remainingWordsRandom.indexOf(a) - remainingWordsRandom.indexOf(b)
+		);
+
+		return new Promise<void>((resolve) => {
+			setTimeout(() => {
+				submittedWords = [];
+
+				resolve();
+			}, 650);
+		});
+	}
+
+	async function animateSubmitError(): Promise<void> {
+		erroredWords = selectedWords;
+
+		return new Promise<void>((resolve) => {
+			setTimeout(() => {
+				// Reset error animation
+				erroredWords = [];
+
+				resolve();
+			}, 1000);
+		});
 	}
 </script>
 
@@ -132,9 +156,10 @@
 			{#key word}
 				<button
 					class="word"
+					data-errored={erroredWords.includes(word)}
 					data-selected={selectedWords.includes(word)}
 					data-submitted={submittedWords.includes(word)}
-					onclick={() => toggleWord(word)}
+					onclick={() => handleToggleWord(word)}
 					style="--selected-index: {submittedWords.indexOf(word)}"
 				>
 					{word}
@@ -164,7 +189,7 @@
 				class="control"
 				data-variant="primary"
 				disabled={!isSubmitEnabled}
-				onclick={() => submitSelection()}>Submit</button
+				onclick={() => handleSubmit()}>Submit</button
 			>
 		</div>
 	{/if}
@@ -308,6 +333,39 @@
 		}
 	}
 
+	.word[data-errored='true'] {
+		animation-delay: 500ms;
+		animation-duration: 400ms;
+		animation-name: word-error;
+		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+	}
+
+	@keyframes word-error {
+		0% {
+			transform: translateX(0);
+		}
+
+		20% {
+			transform: translateX(-4px);
+		}
+
+		40% {
+			transform: translateX(4px);
+		}
+
+		60% {
+			transform: translateX(-4px);
+		}
+
+		80% {
+			transform: translateX(4px);
+		}
+
+		100% {
+			transform: translateY(0);
+		}
+	}
+
 	.mistakes {
 		align-items: center;
 		display: flex;
@@ -345,3 +403,4 @@
 		color: var(--color-white);
 	}
 </style>
+
