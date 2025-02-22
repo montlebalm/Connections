@@ -322,6 +322,7 @@
 		border: none;
 		border-radius: 8px;
 		color: var(--color-grey-1);
+		cursor: pointer;
 		font-size: 1rem;
 		font-weight: bold;
 		height: 80px;
@@ -414,6 +415,7 @@
 		background: var(--color-white);
 		border: 1px solid var(--color-grey-2);
 		border-radius: 20px;
+		cursor: pointer;
 		font-size: 1em;
 		padding: 8px 16px;
 	}
