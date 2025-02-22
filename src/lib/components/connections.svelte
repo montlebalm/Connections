@@ -9,11 +9,9 @@
 	//
 
 	const {
-		groups,
-		numMaxGuesses
+		groups
 	}: {
 		groups: Group[];
-		numMaxGuesses: number;
 	} = $props();
 
 	//
@@ -22,7 +20,7 @@
 
 	let guesses: string[][] = $state([]);
 
-	let numGuessesRemaining = $derived(numMaxGuesses - guesses.length);
+	let numMistakesRemaining = $state(4);
 
 	let selectedWords: string[] = $state([]);
 	let submittedWords: string[] = $state([]);
@@ -44,7 +42,7 @@
 	});
 
 	const gameState: 'playing' | 'won' | 'lost' = $derived.by(() => {
-		if (numGuessesRemaining === 0) return 'lost';
+		if (numMistakesRemaining === -1) return 'lost';
 		if (completedGroupIndexes.length === groups.length) return 'won';
 		return 'playing';
 	});
@@ -115,6 +113,7 @@
 
 		// Error
 		await animateSubmitError();
+		numMistakesRemaining -= 1;
 		guesses.push(selectedWords.slice());
 	}
 
@@ -175,8 +174,8 @@
 	</div>
 	<div class="mistakes">
 		{#if gameState === 'playing'}
-			Guesses remaining:
-			{#each new Array(numGuessesRemaining) as _}
+			Mistakes remaining:
+			{#each new Array(numMistakesRemaining) as _}
 				<span class="mistake-dot"></span>
 			{/each}
 		{:else if gameState === 'won'}
