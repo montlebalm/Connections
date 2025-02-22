@@ -321,7 +321,7 @@
 
 	.word[data-submitted='true'] {
 		animation-delay: calc(var(--selected-index) * 100ms);
-		animation-duration: 500ms;
+		animation-duration: 400ms;
 		animation-name: word-submit;
 		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
 	}
