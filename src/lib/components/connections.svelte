@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { range } from '$lib/range';
+	import { GameState } from '$lib/gameState.svelte';
 	import { shuffleArray } from '$lib/shuffleArray';
 	import { type Group } from '$lib/types';
 	import { wait } from '$lib/wait';
@@ -18,22 +18,20 @@
 	// State
 	//
 
-	let guesses: string[][] = $state([]);
-
-	let numMistakesRemaining = $state(4);
+	const gameState = new GameState(groups.length);
 
 	let selectedWords: string[] = $state([]);
 	let submittedWords: string[] = $state([]);
 	let erroredWords: string[] = $state([]);
 
-	let completedGroupIndexes: number[] = $state([]);
-
-	const completedGroups = $derived(completedGroupIndexes.map((index) => groups[index]));
+	const completedGroups: Group[] = $derived(
+		gameState.completedGroupIndexes.map((index) => groups[index])
+	);
 
 	const remainingWords = $derived(
-		range(0, groups.length)
-			.filter((index) => !completedGroupIndexes.includes(index))
-			.flatMap((index) => groups[index].words)
+		groups
+			.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
+			.flatMap((group) => group.words)
 	);
 
 	let remainingWordsRandom: string[] = $state([]);
@@ -41,15 +39,9 @@
 		remainingWordsRandom = shuffleArray(remainingWords);
 	});
 
-	const gameState: 'playing' | 'won' | 'lost' = $derived.by(() => {
-		if (numMistakesRemaining === -1) return 'lost';
-		if (completedGroupIndexes.length === groups.length) return 'won';
-		return 'playing';
-	});
+	let isAnimating = $state(false);
 
-	const isActionable = $derived(
-		gameState === 'playing' && !submittedWords.length && !erroredWords.length
-	);
+	const isActionable = $derived(gameState.state === 'playing' && !isAnimating);
 
 	const isShuffleEnabled = $derived(isActionable);
 
@@ -88,7 +80,7 @@
 
 	async function handleSubmit(): Promise<void> {
 		// Check for duplicate guess
-		const hasAlreadyGuessed = guesses.some((guess) =>
+		const hasAlreadyGuessed = gameState.guesses.some((guess) =>
 			guess.every((word) => selectedWords.includes(word))
 		);
 		if (hasAlreadyGuessed) {
@@ -96,6 +88,7 @@
 			return;
 		}
 
+		isAnimating = true;
 		await animateSubmit();
 
 		// Success
@@ -106,15 +99,17 @@
 			await wait(600);
 
 			handleDeselect();
-			completedGroupIndexes.push(groupIndex);
+			gameState.completedGroupIndexes.push(groupIndex);
+			isAnimating = false;
 
 			return;
 		}
 
 		// Error
 		await animateSubmitError();
-		numMistakesRemaining -= 1;
-		guesses.push(selectedWords.slice());
+		gameState.numMistakesRemaining -= 1;
+		gameState.guesses.push(selectedWords.slice());
+		isAnimating = false;
 	}
 
 	async function animateSubmit(): Promise<void> {
@@ -173,18 +168,18 @@
 		{/each}
 	</div>
 	<div class="mistakes">
-		{#if gameState === 'playing'}
+		{#if gameState.state === 'playing'}
 			Mistakes remaining:
-			{#each new Array(numMistakesRemaining) as _}
+			{#each new Array(gameState.numMistakesRemaining) as _}
 				<span class="mistake-dot"></span>
 			{/each}
-		{:else if gameState === 'won'}
+		{:else if gameState.state === 'won'}
 			You did it!
-		{:else if gameState === 'lost'}
+		{:else if gameState.state === 'lost'}
 			Game over
 		{/if}
 	</div>
-	{#if gameState === 'playing'}
+	{#if gameState.state === 'playing'}
 		<div class="controls">
 			<button class="control" disabled={!isShuffleEnabled} onclick={() => handleShuffle()}
 				>Shuffle</button
