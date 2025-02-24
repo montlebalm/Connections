@@ -361,7 +361,8 @@
 	}
 
 	.words {
-		position: relative;
+		display: grid;
+		grid-template-columns: 1fr;
 	}
 
 	.word {
@@ -372,17 +373,17 @@
 		cursor: pointer;
 		font-size: 1rem;
 		font-weight: bold;
+		grid-area: 1 / 1;
 		padding: 0;
+		position: relative;
 		text-transform: uppercase;
+		transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
+			translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
 		transition:
 			background 200ms ease,
 			color 200ms ease,
 			transform 500ms ease;
 		width: 144px;
-
-		transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
-			translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
-		position: absolute;
 	}
 
 	.word[data-selected='true'] {
@@ -399,18 +400,15 @@
 
 	@keyframes word-submit {
 		0% {
-			transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
-				translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
+			top: 0;
 		}
 
 		50% {
-			transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
-				translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px - 4px));
+			top: -4px;
 		}
 
 		100% {
-			transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
-				translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
+			top: 0;
 		}
 	}
 
@@ -423,27 +421,27 @@
 
 	@keyframes word-error {
 		0% {
-			transform: translateX(0);
+			left: 0;
 		}
 
 		20% {
-			transform: translateX(-4px);
+			left: -4px;
 		}
 
 		40% {
-			transform: translateX(4px);
+			left: 4px;
 		}
 
 		60% {
-			transform: translateX(-4px);
+			left: -4px;
 		}
 
 		80% {
-			transform: translateX(4px);
+			left: 4px;
 		}
 
 		100% {
-			transform: translateY(0);
+			left: 0;
 		}
 	}
 
