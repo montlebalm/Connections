@@ -347,7 +347,7 @@
 		transition:
 			background 200ms ease,
 			color 200ms ease;
-		width: 144px;
+		width: calc(25% - 6px);
 	}
 
 	.word[data-selected='true'] {
