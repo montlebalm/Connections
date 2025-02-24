@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { GameState } from '$lib/gameState.svelte';
-	import { getWordPositions } from '$lib/getWordPositions';
 	import { shuffleArray } from '$lib/shuffleArray';
 	import { type Group, type WordPositions } from '$lib/types';
 	import { wait } from '$lib/wait';
@@ -35,13 +34,11 @@
 		gameState.completedGroupIndexes.map((index) => groups[index])
 	);
 
-	let wordPositions: WordPositions = $state(
-		getWordPositions(
-			shuffleArray(
-				groups
-					.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
-					.flatMap((group) => group.words)
-			)
+	let remainingWords = $state(
+		shuffleArray(
+			groups
+				.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
+				.flatMap((group) => group.words)
 		)
 	);
 
@@ -56,8 +53,8 @@
 	const isSubmitEnabled = $derived(isActionable && selectedWords.length === 4);
 
 	const styleWordsHeight = $derived(
-		Math.floor(Object.keys(wordPositions).length / 4) * ROW_HEIGHT +
-			(Math.floor(Object.keys(wordPositions).length / 4) - 1) * 8
+		Math.floor(remainingWords.length / 4) * ROW_HEIGHT +
+			(Math.floor(remainingWords.length / 4) - 1) * 8
 	);
 
 	//
@@ -86,13 +83,7 @@
 	}
 
 	function handleShuffle(): void {
-		wordPositions = getWordPositions(
-			shuffleArray(
-				groups
-					.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
-					.flatMap((group) => group.words)
-			)
-		);
+		remainingWords = shuffleArray(remainingWords);
 	}
 
 	async function handleSubmit(): Promise<void> {
@@ -107,12 +98,11 @@
 
 		isAnimating = true;
 
-		// // Start the "hop" animation by assigning to `submittedWords`
-		// submittedWords = selectedWords.toSorted(
-		// 	// Sort words as they appear in the grid so they'll hop in order
-		// 	(a, b) => remainingWords.indexOf(a) - remainingWords.indexOf(b)
-		// );
-		submittedWords = selectedWords;
+		// Start the "hop" animation by assigning to `submittedWords`
+		submittedWords = selectedWords.toSorted(
+			// Sort words as they appear in the grid so they'll hop in order
+			(a, b) => remainingWords.indexOf(a) - remainingWords.indexOf(b)
+		);
 		await wait(1000);
 
 		// Success
@@ -120,27 +110,10 @@
 			group.words.every((word) => selectedWords.includes(word))
 		);
 		if (matchedGroup) {
-			let topRowIndexesRemaining: number[] = [0, 1, 2, 3];
-			submittedWords.forEach((word) => {
-				const wordPosition = wordPositions[word];
+			const nextRemainingWords = remainingWords.filter((word) => !submittedWords.includes(word));
+			remainingWords = submittedWords.concat(nextRemainingWords);
 
-				// Leave the word alone if it's already in the top row
-				if (wordPosition.row === 0) {
-					topRowIndexesRemaining = topRowIndexesRemaining.filter(
-						(index) => index !== wordPosition.col
-					);
-				} else {
-					const nextTopRowIndex = topRowIndexesRemaining.shift();
-					const wordToSwap = Object.keys(wordPositions).find(
-						(item) => wordPositions[item].row === 0 && wordPositions[item].col === nextTopRowIndex
-					);
-					const wordToSwapPosition = wordPositions[wordToSwap!];
-
-					wordPositions[wordToSwap!] = wordPosition;
-					wordPositions[word] = wordToSwapPosition;
-				}
-			});
-
+			// Wait for words to reorder
 			await wait(600);
 
 			// Wait for the group to animate
@@ -151,12 +124,7 @@
 			gameState.completedGroupIndexes.push(matchedGroupIndex);
 
 			// Clean up word positions
-			submittedWords.forEach((word) => {
-				delete wordPositions[word];
-			});
-			Object.values(wordPositions).forEach((position) => {
-				position.row -= 1;
-			});
+			remainingWords = nextRemainingWords;
 
 			// Reset state
 			handleDeselect();
@@ -199,15 +167,15 @@
 			</div>
 		{/each}
 		<div class="words" style:height={`${styleWordsHeight}px`}>
-			{#each Object.keys(wordPositions) as word (word)}
+			{#each remainingWords as word, i (word)}
 				<button
 					class="word"
 					data-errored={erroredWords.includes(word)}
 					data-selected={selectedWords.includes(word)}
 					data-submitted={submittedWords.includes(word)}
 					onclick={() => handleToggleWord(word)}
-					style:--col-index={wordPositions[word]?.col}
-					style:--row-index={wordPositions[word]?.row}
+					style:--col-index={i % 4}
+					style:--row-index={Math.floor(i / 4)}
 					style:--selected-index={submittedWords.indexOf(word)}
 					style:height={`${ROW_HEIGHT}px`}
 				>
@@ -389,6 +357,7 @@
 	.word[data-selected='true'] {
 		background: var(--color-grey-2);
 		color: var(--color-white);
+		z-index: 1;
 	}
 
 	.word[data-submitted='true'] {
