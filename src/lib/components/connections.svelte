@@ -219,7 +219,7 @@
 	<div class="mistakes">
 		{#if gameState.state === 'playing'}
 			Mistakes remaining:
-			{#each new Array(gameState.numMistakesRemaining) as _}
+			{#each { length: gameState.numMistakesRemaining }}
 				<span class="mistake-dot"></span>
 			{/each}
 		{:else if gameState.state === 'won'}
