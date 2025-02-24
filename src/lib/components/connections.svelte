@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
-	import { GameState } from '$lib/gameState.svelte';
 	import { shuffleArray } from '$lib/shuffleArray';
 	import { type Group, type WordPositions } from '$lib/types';
 	import { wait } from '$lib/wait';
@@ -19,27 +18,35 @@
 	// State
 	//
 
-	const gameState = new GameState(groups.length);
+	const guesses: string[][] = $state([]);
+
+	let numMistakesRemaining: number = $state(4);
+
+	const completedGroupIndexes: number[] = $state([]);
+
+	const gameState: 'playing' | 'won' | 'lost' = $derived.by(() => {
+		if (numMistakesRemaining === -1) return 'lost';
+		if (completedGroupIndexes.length === groups.length) return 'won';
+		return 'playing';
+	});
 
 	let selectedWords: string[] = $state([]);
 	let submittedWords: string[] = $state([]);
 	let erroredWords: string[] = $state([]);
 
-	const completedGroups: Group[] = $derived(
-		gameState.completedGroupIndexes.map((index) => groups[index])
-	);
+	const completedGroups: Group[] = $derived(completedGroupIndexes.map((index) => groups[index]));
 
 	let remainingWords = $state(
 		shuffleArray(
 			groups
-				.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
+				.filter((_, index) => !completedGroupIndexes.includes(index))
 				.flatMap((group) => group.words)
 		)
 	);
 
 	let isAnimating = $state(false);
 
-	const isActionable = $derived(gameState.state === 'playing' && !isAnimating);
+	const isActionable = $derived(gameState === 'playing' && !isAnimating);
 
 	const isShuffleEnabled = $derived(isActionable);
 
@@ -78,7 +85,7 @@
 
 	async function handleSubmit(): Promise<void> {
 		// Check for duplicate guess
-		const hasAlreadyGuessed = gameState.guesses.some((guess) =>
+		const hasAlreadyGuessed = guesses.some((guess) =>
 			guess.every((word) => selectedWords.includes(word))
 		);
 		if (hasAlreadyGuessed) {
@@ -93,31 +100,28 @@
 			// Sort words as they appear in the grid so they'll hop in order
 			(a, b) => remainingWords.indexOf(a) - remainingWords.indexOf(b)
 		);
-		await wait(1400);
+		await wait(1200);
+
+		// Clear the submitted words so that they don't "hop" again when reordered
+		const submittedWordsCopy = submittedWords.slice();
+		submittedWords = [];
 
 		// Success
 		const matchedGroup = groups.find((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
 		if (matchedGroup) {
-			// Clear the submitted words so that they don't "hop" again when reordered
-			const submittedWordsCopy = submittedWords.slice();
-			submittedWords = [];
-
 			const nextRemainingWords = remainingWords.filter(
 				(word) => !submittedWordsCopy.includes(word)
 			);
 			remainingWords = submittedWordsCopy.concat(nextRemainingWords);
 
-			// Wait for words to reorder
-			await wait(600);
-
-			// Wait for the group to animate
-			await wait(600);
+			// Wait for words to reorder and the group to animate
+			await wait(1000);
 
 			// Track completed group
 			const matchedGroupIndex = groups.indexOf(matchedGroup);
-			gameState.completedGroupIndexes.push(matchedGroupIndex);
+			completedGroupIndexes.push(matchedGroupIndex);
 
 			// Clean up word positions
 			remainingWords = nextRemainingWords;
@@ -131,8 +135,8 @@
 
 		// Error
 		await animateSubmitError();
-		gameState.numMistakesRemaining -= 1;
-		gameState.guesses.push(selectedWords.slice());
+		numMistakesRemaining -= 1;
+		guesses.push(selectedWords.slice());
 		isAnimating = false;
 	}
 
@@ -178,18 +182,18 @@
 		</div>
 	</div>
 	<div class="mistakes">
-		{#if gameState.state === 'playing'}
+		{#if gameState === 'playing'}
 			Mistakes remaining:
-			{#each { length: gameState.numMistakesRemaining }}
+			{#each { length: numMistakesRemaining }}
 				<span class="mistake-dot"></span>
 			{/each}
-		{:else if gameState.state === 'won'}
+		{:else if gameState === 'won'}
 			You did it!
-		{:else if gameState.state === 'lost'}
+		{:else if gameState === 'lost'}
 			Game over
 		{/if}
 	</div>
-	{#if gameState.state === 'playing'}
+	{#if gameState === 'playing'}
 		<div class="controls">
 			<button class="control" disabled={!isShuffleEnabled} onclick={() => handleShuffle()}
 				>Shuffle</button
@@ -255,7 +259,7 @@
 
 	.group {
 		align-items: center;
-		animation-duration: 900ms;
+		animation-duration: 800ms;
 		animation-name: group-enter;
 		animation-timing-function: var(--ease-out-quint);
 		border-radius: 8px;
