@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { GameState } from '$lib/gameState.svelte';
+	import { getWordPositions } from '$lib/getWordPositions';
 	import { shuffleArray } from '$lib/shuffleArray';
-	import { type Group } from '$lib/types';
+	import { type Group, type WordPositions } from '$lib/types';
 	import { wait } from '$lib/wait';
+
+	//
+	// Constants
+	//
+
+	const ROW_HEIGHT = 80;
 
 	//
 	// Props
@@ -28,16 +35,15 @@
 		gameState.completedGroupIndexes.map((index) => groups[index])
 	);
 
-	const remainingWords = $derived(
-		groups
-			.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
-			.flatMap((group) => group.words)
+	let wordPositions: WordPositions = $state(
+		getWordPositions(
+			shuffleArray(
+				groups
+					.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
+					.flatMap((group) => group.words)
+			)
+		)
 	);
-
-	let remainingWordsRandom: string[] = $state([]);
-	$effect(() => {
-		remainingWordsRandom = shuffleArray(remainingWords);
-	});
 
 	let isAnimating = $state(false);
 
@@ -48,6 +54,11 @@
 	const isDeselectEnabled = $derived(isActionable && selectedWords.length > 0);
 
 	const isSubmitEnabled = $derived(isActionable && selectedWords.length === 4);
+
+	const styleWordsHeight = $derived(
+		Math.floor(Object.keys(wordPositions).length / 4) * ROW_HEIGHT +
+			(Math.floor(Object.keys(wordPositions).length / 4) - 1) * 8
+	);
 
 	//
 	// Handlers
@@ -75,7 +86,13 @@
 	}
 
 	function handleShuffle(): void {
-		remainingWordsRandom = shuffleArray(remainingWords);
+		wordPositions = getWordPositions(
+			shuffleArray(
+				groups
+					.filter((_, index) => !gameState.completedGroupIndexes.includes(index))
+					.flatMap((group) => group.words)
+			)
+		);
 	}
 
 	async function handleSubmit(): Promise<void> {
@@ -89,17 +106,61 @@
 		}
 
 		isAnimating = true;
-		await animateSubmit();
+
+		// // Start the "hop" animation by assigning to `submittedWords`
+		// submittedWords = selectedWords.toSorted(
+		// 	// Sort words as they appear in the grid so they'll hop in order
+		// 	(a, b) => remainingWords.indexOf(a) - remainingWords.indexOf(b)
+		// );
+		submittedWords = selectedWords;
+		await wait(1000);
 
 		// Success
-		const groupIndex = groups.findIndex((group) =>
+		const matchedGroup = groups.find((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
-		if (groupIndex !== -1) {
+		if (matchedGroup) {
+			let topRowIndexesRemaining: number[] = [0, 1, 2, 3];
+			submittedWords.forEach((word) => {
+				const wordPosition = wordPositions[word];
+
+				// Leave the word alone if it's already in the top row
+				if (wordPosition.row === 0) {
+					topRowIndexesRemaining = topRowIndexesRemaining.filter(
+						(index) => index !== wordPosition.col
+					);
+				} else {
+					const nextTopRowIndex = topRowIndexesRemaining.shift();
+					const wordToSwap = Object.keys(wordPositions).find(
+						(item) => wordPositions[item].row === 0 && wordPositions[item].col === nextTopRowIndex
+					);
+					const wordToSwapPosition = wordPositions[wordToSwap!];
+
+					wordPositions[wordToSwap!] = wordPosition;
+					wordPositions[word] = wordToSwapPosition;
+				}
+			});
+
 			await wait(600);
 
+			// Wait for the group to animate
+			await wait(600);
+
+			// Track completed group
+			const matchedGroupIndex = groups.indexOf(matchedGroup);
+			gameState.completedGroupIndexes.push(matchedGroupIndex);
+
+			// Clean up word positions
+			submittedWords.forEach((word) => {
+				delete wordPositions[word];
+			});
+			Object.values(wordPositions).forEach((position) => {
+				position.row -= 1;
+			});
+
+			// Reset state
 			handleDeselect();
-			gameState.completedGroupIndexes.push(groupIndex);
+			submittedWords = [];
 			isAnimating = false;
 
 			return;
@@ -110,21 +171,6 @@
 		gameState.numMistakesRemaining -= 1;
 		gameState.guesses.push(selectedWords.slice());
 		isAnimating = false;
-	}
-
-	async function animateSubmit(): Promise<void> {
-		// Sort words in the order that they appear in the grid
-		submittedWords = selectedWords.toSorted(
-			(a, b) => remainingWordsRandom.indexOf(a) - remainingWordsRandom.indexOf(b)
-		);
-
-		return new Promise<void>((resolve) => {
-			setTimeout(() => {
-				submittedWords = [];
-
-				resolve();
-			}, 650);
-		});
 	}
 
 	async function animateSubmitError(): Promise<void> {
@@ -145,27 +191,30 @@
 	<div class="preamble">Create four groups of four!</div>
 	<div class="board">
 		{#each completedGroups as group}
-			<div class="group" data-difficulty={group.difficulty}>
+			<div class="group" data-difficulty={group.difficulty} style:height={`${ROW_HEIGHT}px`}>
 				<div class="group-text">
 					<div class="group-text-theme">{group.theme}</div>
 					{group.words.join(', ')}
 				</div>
 			</div>
 		{/each}
-		{#each remainingWordsRandom as word}
-			{#key word}
+		<div class="words" style:height={`${styleWordsHeight}px`}>
+			{#each Object.keys(wordPositions) as word (word)}
 				<button
 					class="word"
 					data-errored={erroredWords.includes(word)}
 					data-selected={selectedWords.includes(word)}
 					data-submitted={submittedWords.includes(word)}
 					onclick={() => handleToggleWord(word)}
-					style="--selected-index: {submittedWords.indexOf(word)}"
+					style:--col-index={wordPositions[word]?.col}
+					style:--row-index={wordPositions[word]?.row}
+					style:--selected-index={submittedWords.indexOf(word)}
+					style:height={`${ROW_HEIGHT}px`}
 				>
 					{word}
 				</button>
-			{/key}
-		{/each}
+			{/each}
+		</div>
 	</div>
 	<div class="mistakes">
 		{#if gameState.state === 'playing'}
@@ -251,7 +300,6 @@
 		border-radius: 8px;
 		display: flex;
 		flex-direction: column;
-		height: 80px;
 		justify-content: center;
 		width: 100%;
 	}
@@ -312,6 +360,10 @@
 		font-weight: bold;
 	}
 
+	.words {
+		position: relative;
+	}
+
 	.word {
 		background: var(--color-grey-4);
 		border: none;
@@ -320,13 +372,17 @@
 		cursor: pointer;
 		font-size: 1rem;
 		font-weight: bold;
-		height: 80px;
 		padding: 0;
 		text-transform: uppercase;
 		transition:
 			background 200ms ease,
-			color 200ms ease;
+			color 200ms ease,
+			transform 500ms ease;
 		width: 144px;
+
+		transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
+			translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
+		position: absolute;
 	}
 
 	.word[data-selected='true'] {
@@ -343,15 +399,18 @@
 
 	@keyframes word-submit {
 		0% {
-			transform: translateY(0);
+			transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
+				translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
 		}
 
 		50% {
-			transform: translateY(-4px);
+			transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
+				translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px - 4px));
 		}
 
 		100% {
-			transform: translateY(0);
+			transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
+				translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
 		}
 	}
 
