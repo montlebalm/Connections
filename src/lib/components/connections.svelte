@@ -1,14 +1,9 @@
 <script lang="ts">
+	import { flip } from 'svelte/animate';
 	import { GameState } from '$lib/gameState.svelte';
 	import { shuffleArray } from '$lib/shuffleArray';
 	import { type Group, type WordPositions } from '$lib/types';
 	import { wait } from '$lib/wait';
-
-	//
-	// Constants
-	//
-
-	const ROW_HEIGHT = 80;
 
 	//
 	// Props
@@ -51,11 +46,6 @@
 	const isDeselectEnabled = $derived(isActionable && selectedWords.length > 0);
 
 	const isSubmitEnabled = $derived(isActionable && selectedWords.length === 4);
-
-	const styleWordsHeight = $derived(
-		Math.floor(remainingWords.length / 4) * ROW_HEIGHT +
-			(Math.floor(remainingWords.length / 4) - 1) * 8
-	);
 
 	//
 	// Handlers
@@ -103,15 +93,21 @@
 			// Sort words as they appear in the grid so they'll hop in order
 			(a, b) => remainingWords.indexOf(a) - remainingWords.indexOf(b)
 		);
-		await wait(1000);
+		await wait(1400);
 
 		// Success
 		const matchedGroup = groups.find((group) =>
 			group.words.every((word) => selectedWords.includes(word))
 		);
 		if (matchedGroup) {
-			const nextRemainingWords = remainingWords.filter((word) => !submittedWords.includes(word));
-			remainingWords = submittedWords.concat(nextRemainingWords);
+			// Clear the submitted words so that they don't "hop" again when reordered
+			const submittedWordsCopy = submittedWords.slice();
+			submittedWords = [];
+
+			const nextRemainingWords = remainingWords.filter(
+				(word) => !submittedWordsCopy.includes(word)
+			);
+			remainingWords = submittedWordsCopy.concat(nextRemainingWords);
 
 			// Wait for words to reorder
 			await wait(600);
@@ -128,7 +124,6 @@
 
 			// Reset state
 			handleDeselect();
-			submittedWords = [];
 			isAnimating = false;
 
 			return;
@@ -159,25 +154,23 @@
 	<div class="preamble">Create four groups of four!</div>
 	<div class="board">
 		{#each completedGroups as group}
-			<div class="group" data-difficulty={group.difficulty} style:height={`${ROW_HEIGHT}px`}>
+			<div class="group" data-difficulty={group.difficulty}>
 				<div class="group-text">
 					<div class="group-text-theme">{group.theme}</div>
 					{group.words.join(', ')}
 				</div>
 			</div>
 		{/each}
-		<div class="words" style:height={`${styleWordsHeight}px`}>
+		<div class="words">
 			{#each remainingWords as word, i (word)}
 				<button
+					animate:flip={{ duration: () => (selectedWords.length ? 500 : 0) }}
 					class="word"
 					data-errored={erroredWords.includes(word)}
 					data-selected={selectedWords.includes(word)}
 					data-submitted={submittedWords.includes(word)}
 					onclick={() => handleToggleWord(word)}
-					style:--col-index={i % 4}
-					style:--row-index={Math.floor(i / 4)}
 					style:--selected-index={submittedWords.indexOf(word)}
-					style:height={`${ROW_HEIGHT}px`}
 				>
 					{word}
 				</button>
@@ -268,6 +261,7 @@
 		border-radius: 8px;
 		display: flex;
 		flex-direction: column;
+		height: 80px;
 		justify-content: center;
 		width: 100%;
 	}
@@ -329,8 +323,9 @@
 	}
 
 	.words {
-		display: grid;
-		grid-template-columns: 1fr;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 
 	.word {
@@ -341,16 +336,13 @@
 		cursor: pointer;
 		font-size: 1rem;
 		font-weight: bold;
-		grid-area: 1 / 1;
+		height: 80px;
 		padding: 0;
 		position: relative;
 		text-transform: uppercase;
-		transform: translateX(calc(var(--col-index) * 100% + var(--col-index) * 8px))
-			translateY(calc(var(--row-index) * 100% + var(--row-index) * 8px));
 		transition:
 			background 200ms ease,
-			color 200ms ease,
-			transform 500ms ease;
+			color 200ms ease;
 		width: 144px;
 	}
 
