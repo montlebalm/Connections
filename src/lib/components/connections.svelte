@@ -394,7 +394,7 @@
 		animation-delay: calc(var(--selected-index) * 100ms);
 		animation-duration: 400ms;
 		animation-name: word-submit;
-		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+		animation-timing-function: var(--ease-out-quint);
 	}
 
 	@keyframes word-submit {
@@ -418,7 +418,7 @@
 		animation-delay: 500ms;
 		animation-duration: 400ms;
 		animation-name: word-error;
-		animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+		animation-timing-function: var(--ease-out-quint);
 	}
 
 	@keyframes word-error {
