@@ -102,8 +102,23 @@
 		);
 		await wait(1200);
 
+		// Order the submitted words such that words that were already in the top row
+		// maintain their position
+		const submittedWordsOrdered: string[] = new Array(4).fill(undefined);
+		submittedWords.forEach((word, i) => {
+			const wordIndex = remainingWords.indexOf(word);
+
+			// Leave it in the top row
+			if (wordIndex < 4) {
+				submittedWordsOrdered[wordIndex] = word;
+			} else {
+				// Move it to the next available space
+				const nextBlankIndex = submittedWordsOrdered.indexOf(undefined);
+				submittedWordsOrdered[nextBlankIndex] = word;
+			}
+		});
+
 		// Clear the submitted words so that they don't "hop" again when reordered
-		const submittedWordsCopy = submittedWords.slice();
 		submittedWords = [];
 
 		// Success
@@ -112,9 +127,9 @@
 		);
 		if (matchedGroup) {
 			const nextRemainingWords = remainingWords.filter(
-				(word) => !submittedWordsCopy.includes(word)
+				(word) => !submittedWordsOrdered.includes(word)
 			);
-			remainingWords = submittedWordsCopy.concat(nextRemainingWords);
+			remainingWords = submittedWordsOrdered.concat(nextRemainingWords);
 
 			// Wait for words to reorder and the group to animate
 			await wait(1000);
@@ -330,6 +345,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
+		width: 100%;
 	}
 
 	.word {
